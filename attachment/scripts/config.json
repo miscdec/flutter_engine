@@ -1,7 +1,7 @@
 [
     {
         "name": "bootstrap",
-        "target": "./",
+        "target": "../",
         "type": "files",
         "file_path": "flutter/attachment/repos/bootstrap"
     },

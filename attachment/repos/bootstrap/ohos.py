@@ -132,6 +132,7 @@ def getNdkHome():
         dirs = []
         findFile(os.getenv("OHOS_SDK_HOME"), "native", dirs)
         findFile(os.getenv("HOS_SDK_HOME"), "native", dirs)
+        findFile(os.getenv("DEVECO_SDK_HOME"), "native", dirs)
         dirs.sort(reverse=True)
         for dir in dirs:
             if isNdkValid(dir):
@@ -141,7 +142,7 @@ def getNdkHome():
     if not isNdkValid(OHOS_NDK_HOME):
         logging.error(
             """
-    Please set the environment variables for HarmonyOS SDK to "HOS_SDK_HOME" or "OHOS_SDK_HOME".
+    Please set the environment variables for HarmonyOS SDK to "DEVECO_SDK_HOME".
     We will use both native/llvm and native/sysroot.
     Please ensure that the file "native/llvm/bin/clang" exists and is executable."""
         )
