@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #include <utility>
 
+#include "ohos_main.h"
 #include "third_party/skia/include/core/SkAlphaType.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkColorType.h"
@@ -48,6 +49,7 @@ OHOSExternalTextureGL::OHOSExternalTextureGL(int64_t id, const std::shared_ptr<O
     buffer_ = nullptr;
     pixelMap_ = nullptr;
     lastImage_ = nullptr;
+    isEmulator_ = OhosMain::IsEmulator();
 }
 
 OHOSExternalTextureGL::~OHOSExternalTextureGL()
@@ -127,8 +129,14 @@ void OHOSExternalTextureGL::Paint(PaintContext& context,
     // The incoming texture is vertically flipped, so we flip it
     // back. OpenGL's coordinate system has Positive Y equivalent to up, while
     // Skia's coordinate system has Negative Y equvalent to up.
-    context.canvas->translate(bounds.x(), bounds.y() + bounds.height());
-    context.canvas->scale(bounds.width(), -bounds.height());
+    // 模拟器和真机在外接纹理功能的表现不一致，需要进行适配
+    if (isEmulator_) {
+      context.canvas->translate(bounds.x(), bounds.y());
+      context.canvas->scale(bounds.width(), bounds.height());
+    } else {
+      context.canvas->translate(bounds.x(), bounds.y() + bounds.height());
+      context.canvas->scale(bounds.width(), -bounds.height());
+    }
 
     if (!transform.isIdentity()) {
       sk_sp<SkShader> shader = image->makeShader(
