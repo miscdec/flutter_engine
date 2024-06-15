@@ -100,19 +100,17 @@ void OHOSExternalTextureGL::Paint(PaintContext& context,
   }
   if (state_ == AttachmentState::uninitialized) {
     Attach();
-  }
-
-  if (!freeze) {
-    if (!first_update_) {
-      setBackground(bounds.width(), bounds.height());
-      Update();
-      first_update_ = true;
-    } else if (new_frame_ready_ && pixelMap_ != nullptr) {
+    if (!freeze && new_frame_ready_ && pixelMap_ != nullptr) {
       ProducePixelMapToNativeImage();
       Update();
-      new_frame_ready_ = false;
-    }
+	}
+    new_frame_ready_ = false;
+  }
 
+  if (!freeze && !first_update_ && !new_frame_ready_ && pixelMap_ == nullptr) {
+    setBackground(bounds.width(), bounds.height());
+    Update();
+    first_update_ = true;
   }
 
   GrGLTextureInfo textureInfo = {
@@ -155,7 +153,7 @@ void OHOSExternalTextureGL::OnGrContextCreated()
 void OHOSExternalTextureGL::OnGrContextDestroyed()
 {
   FML_DLOG(INFO)<<" OHOSExternalTextureGL::OnGrContextDestroyed";
-  if (state_ == AttachmentState::attached && pixelMap_ == nullptr) {
+  if (state_ == AttachmentState::attached) {
     Detach();
     glDeleteTextures(1, &texture_name_);
   }
@@ -166,13 +164,13 @@ void OHOSExternalTextureGL::MarkNewFrameAvailable()
 {
   FML_DLOG(INFO)<<" OHOSExternalTextureGL::MarkNewFrameAvailable";
   new_frame_ready_ = true;
-  first_update_ = true;
   Update();
 }
 
 void OHOSExternalTextureGL::OnTextureUnregistered()
 {
   FML_DLOG(INFO)<<" OHOSExternalTextureGL::OnTextureUnregistered";
+  first_update_ = false;
   OH_NativeImage_UnsetOnFrameAvailableListener(nativeImage_);
   OH_NativeImage_Destroy(&nativeImage_);
 }
@@ -182,6 +180,7 @@ void OHOSExternalTextureGL::Update()
   int32_t ret = OH_NativeImage_UpdateSurfaceImage(nativeImage_);
   if (ret != 0) {
     FML_DLOG(FATAL)<<"OHOSExternalTextureGL OH_NativeImage_UpdateSurfaceImage err code:"<< ret;
+    return;
   }
   UpdateTransform();
 }
@@ -232,11 +231,13 @@ void OHOSExternalTextureGL::setBackground(int32_t width, int32_t height)
   int32_t ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow_, code, width, height);
   if (ret != 0) {
     FML_DLOG(ERROR) << "OHOSExternalTextureGL in setBackground OH_NativeWindow_NativeWindowHandleOpt err:" << ret;
+    return;
   }
 
   ret = OH_NativeWindow_NativeWindowRequestBuffer(nativeWindow_, &buffer_, &fenceFd);
   if (ret != 0) {
     FML_DLOG(ERROR) << "OHOSExternalTextureGL in setBackground OH_NativeWindow_NativeWindowRequestBuffer err:" << ret;
+    return;
   }
 
   BufferHandle *handle = OH_NativeWindow_GetBufferHandleFromNative(buffer_);
