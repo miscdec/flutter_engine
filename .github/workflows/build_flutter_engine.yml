@@ -1,0 +1,64 @@
+name: BUILD FLUTTER ENGINE
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EngineRepo: https://github.com/miscdec/flutter_engine.git
+      EngineBranch: master
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: false
+      - name: Get python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install packages
+        run: sudo apt-get install -y git wget curl software-properties-common unzip python-pip lsb-release sudo apt-transport-https ninja-build
+      - name: Clone depot_tools
+        run: git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+      - name: Clone Flutter repo
+        run: | 
+          git clone --depth 1 -b $EngineBranch --single-branch $EngineRepo
+      - name: gcclient Setup
+        run: |
+           ROOT_DIR=`pwd` 
+           export PATH=$ROOT_DIR/depot_tools:$PATH
+           mkdir customEngine
+           cd customEngine
+           echo 'solutions = [{"managed": False,"name": "src/flutter","url": "'$ROOT_DIR/engine'","custom_deps": {},"deps_file": "DEPS","safesync_url": "",},]' > .gclient
+           gclient sync
+      - name: ninja build arm64
+        run: |
+          ROOT_DIR=`pwd` 
+          export PATH=$ROOT_DIR/depot_tools:$PATH 
+          customEngine/src/flutter/tools/gn --android --android-cpu=arm64 --runtime-mode=release && ninja -C customEngine/src/out/android_release_arm64
+      - name: ninja build arm
+        run: |
+          ROOT_DIR=`pwd` 
+          export PATH=$ROOT_DIR/depot_tools:$PATH 
+          customEngine/src/flutter/tools/gn --android --android-cpu=arm --runtime-mode=release && ninja -C customEngine/src/out/android_release
+      - name: ninja build x64
+        run: |
+          ROOT_DIR=`pwd` 
+          export PATH=$ROOT_DIR/depot_tools:$PATH 
+          customEngine/src/flutter/tools/gn --android --android-cpu=x64 --runtime-mode=release && ninja -C customEngine/src/out/android_release_x64
+      - name: Move to builds
+        run: |
+         mkdir builds
+         cp customEngine/src/out/android_release_arm64/lib.stripped/libflutter.so builds/libflutter_arm64.so 2>/dev/null || :
+         cp customEngine/src/out/android_release/lib.stripped/libflutter.so builds/libflutter_arm.so 2>/dev/null || :
+         cp customEngine/src/out/android_release_x64/lib.stripped/libflutter.so builds/libflutter_x64.so 2>/dev/null || :
+         cp customEngine/src/out/android_jit_release_x86/lib.stripped/libflutter.so builds/libflutter_x86.so 2>/dev/null || :
+      - name: Save the generated files
+        uses: actions/upload-artifact@v3
+        with:
+          name: flutter-engine
+          path: builds/*.so
+          if-no-files-found: warn
