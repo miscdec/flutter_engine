@@ -10,11 +10,11 @@ jobs:
       EngineRepo: https://github.com/miscdec/flutter_engine.git
       EngineBranch: master
     steps:
-      # - name: Free Disk Space (Ubuntu)
-        # uses: jlumbroso/free-disk-space@main
-        # with:
-          # tool-cache: true
-          # android: false
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: false
       - name: Get python
         uses: actions/setup-python@v4
         with:
@@ -36,32 +36,10 @@ jobs:
            echo 'solutions = [{"managed": False,"name": "src/flutter","url": "https://github.com/miscdec/flutter_engine.git","custom_deps": {},"deps_file": "DEPS","safesync_url": "",},]' > .gclient
            echo $ROOT_DIR/engine
            gclient sync
-           ./ohos
       - name: ninja build arm64
         run: |
           ROOT_DIR=`pwd` 
-          export PATH=$ROOT_DIR/depot_tools:$PATH 
-          engine/src/flutter/tools/gn --android --android-cpu=arm64 --runtime-mode=release && ninja -C customEngine/src/out/android_release_arm64
-      - name: ninja build arm
-        run: |
-          ROOT_DIR=`pwd` 
-          export PATH=$ROOT_DIR/depot_tools:$PATH 
-          engine/src/flutter/tools/gn --android --android-cpu=arm --runtime-mode=release && ninja -C customEngine/src/out/android_release
-      - name: ninja build x64
-        run: |
-          ROOT_DIR=`pwd` 
-          export PATH=$ROOT_DIR/depot_tools:$PATH 
-          engine/src/flutter/tools/gn --android --android-cpu=x64 --runtime-mode=release && ninja -C customEngine/src/out/android_release_x64
-      - name: Move to builds
-        run: |
-         mkdir builds
-         cp engine/src/out/android_release_arm64/lib.stripped/libflutter.so builds/libflutter_arm64.so 2>/dev/null || :
-         cp engine/src/out/android_release/lib.stripped/libflutter.so builds/libflutter_arm.so 2>/dev/null || :
-         cp engine/src/out/android_release_x64/lib.stripped/libflutter.so builds/libflutter_x64.so 2>/dev/null || :
-         cp engine/src/out/android_jit_release_x86/lib.stripped/libflutter.so builds/libflutter_x86.so 2>/dev/null || :
-      - name: Save the generated files
-        uses: actions/upload-artifact@v3
-        with:
-          name: flutter-engine
-          path: builds/*.so
-          if-no-files-found: warn
+          export PATH=$ROOT_DIR/depot_tools:$PATH
+          cd engine
+          ls -ll
+          ./ohos
